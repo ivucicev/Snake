@@ -10,13 +10,17 @@ const boardSizeH = boardHeight / blockSize;
 let board: Tile[][] = [];
 let currentDirection: Key = 37;
 let refresh = 250;
-let snakeSize: number = 1;
+let timeout = null;
 let snake: ISnakePart[] = [];
+let food: IFood = null;
 
-interface ISnakePart {
-    x: number;
-    y: number;
+interface IPosition {
+    x: number,
+    y: number
 }
+
+interface ISnakePart extends IPosition {}
+interface IFood extends IPosition {}
 
 enum Tile {
     Empty,
@@ -48,13 +52,14 @@ const draw = () => {
     // draw board
     for (let y = 0; y < boardSizeH; y++) {
         for (let x = 0; x < boardSizeW; x++) {
-            drawTile(x, y, tempBoard[x][y]);
+            drawTile(x, y, Tile.Empty);
         }
     }
 
     // draw snake
-    for(let s; s < snakeSize; s++) {
-        drawTile(s.x, s.y, Tile.Snake);
+    for(let s = 0; s < snake.length; s++) {
+        console.log(snake[s]);
+        drawTile(snake[s].x, snake[s].y, Tile.Snake);
     }
 
     // SEPARATE SNAKE FROM BOARD, make snake has its own path non dependable of board
@@ -87,13 +92,15 @@ const move = (x: number, y: number): number[] => {
 
 }
 
-const clear = () => {
-    ctx.clearRect(0, 0, boardWidth, boardHeight)
+const frame = () => {
+    timeout = setTimeout(() => {
+        requestAnimationFrame(draw);
+        clearTimeout(timeout);
+    }, refresh)
 }
 
-const attachListeners = () => {
-    document.onkeyup = bindKeys;   
-}
+const clear = () => ctx.clearRect(0, 0, boardWidth, boardHeight)
+const attachListeners = () => document.onkeyup = bindKeys;   
 
 const bindKeys = (e) => {
     switch(e.keyCode) {
@@ -115,7 +122,7 @@ const bindKeys = (e) => {
 }
 
 const getTileColor = (type: Tile): string => {
-        switch(type) {
+    switch(type) {
         case Tile.Empty: 
             return '#9ac503';
         case Tile.Food:
@@ -152,28 +159,37 @@ const initBoard = () => {
         }
     }
 
-    randomizeStartPositions();
+    clearTimeout(timeout);
+    initSnake();
+    randomizeFood();
     attachListeners();
-    setInterval(draw, refresh);
+    requestAnimationFrame(frame);
 
 }
 
-const randomizeStartPositions = () => {
+const randomizeFood = () => {
 
-    const snakeInitX = 5;
-    const snakeInitY = 5;
+    let foodInitX = Math.floor(Math.random() * (boardSizeW - 1));
+    let foodInitY = Math.floor(Math.random() * (boardSizeH - 1));
 
-    let foodInitX = snakeInitX;
-    let foodInitY = snakeInitY;
-
-    // make sure first food is not on the same position as snake
-    while(foodInitX == snakeInitX && foodInitY == snakeInitY) {
+    while(snake.filter(v => v.x == foodInitX && v.y == foodInitY).length) {
         foodInitX = Math.floor(Math.random() * (boardSizeW - 1));
         foodInitY = Math.floor(Math.random() * (boardSizeH - 1));
     }
 
-    board[snakeInitY][snakeInitX] = Tile.Snake;
-    board[foodInitY][foodInitX] = Tile.Food;
+    food = {
+        x: foodInitX,
+        y: foodInitY 
+    }
+
+}
+
+const initSnake = () => {
+
+    snake.push({
+        x: 5,
+        y: 5
+    });
 
 }
 
