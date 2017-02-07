@@ -1,12 +1,15 @@
 const canvas: HTMLCanvasElement = document.getElementById("canvas") as HTMLCanvasElement;
 const ctx: CanvasRenderingContext2D = canvas.getContext("2d");
+const scoreEl = document.getElementById("score");
+const walls: any = document.getElementsByName('walls');
 
-const boardWidth = 500;
-const boardHeight = 500;
+const boardWidth = 800;
+const boardHeight = 800;
 const blockSize = 50;
 const boardSizeW = boardWidth / blockSize;
 const boardSizeH = boardHeight / blockSize;
 
+let solidWalls = true;
 let board: Tile[][] = [];
 let currentDirection: Key = 37;
 let refresh = 250;
@@ -35,7 +38,6 @@ enum Key {
     DOWN = 40
 }
 
-
 const drawTile = (x: number, y: number, type: Tile) => {
     ctx.fillStyle = getTileColor(type);
     ctx.fillRect(x * blockSize, y * blockSize, blockSize - 1, blockSize - 1);
@@ -45,75 +47,125 @@ const draw = () => {
     
     clear();
 
-    let tempBoard = board.slice();
-    let nextX = null;
-    let nextY = null;
-
     // draw board
+    drawBoard()
+
+    // draw food
+    drawFood();
+
+    // calculate next
+    calculateNextPositions();
+
+    // check collision
+    checkCollision();
+
+    // is food eaten
+    checkFeast();
+
+    // draw snake
+    drawSnake();
+
+
+}
+
+const checkCollision = () => {
+    if (snake.filter((s, index) => snake[0].x === s.x && snake[0].y === s.y && index > 0).length) gameOver();
+}
+
+const checkFeast = () => {
+    if (snake[0].x === food.x && snake[0].y === food.y) {
+        snake.push({
+            x: snake[snake.length - 1].x,
+            y: snake[snake.length - 1].y
+        });
+        refresh -= 2;
+        scoreEl.innerHTML = `${snake.length}`;
+        randomizeFood();
+    }
+}
+
+const drawFood = () => {
+    drawTile(food.x, food.y, Tile.Food);
+}
+
+const drawSnake = () => {
+    for(let s = 0; s < snake.length; s++) {
+        drawTile(snake[s].x, snake[s].y, Tile.Snake);
+    }
+}
+
+const drawBoard = () => {
     for (let y = 0; y < boardSizeH; y++) {
         for (let x = 0; x < boardSizeW; x++) {
             drawTile(x, y, Tile.Empty);
         }
     }
-
-    // draw snake
-    for(let s = 0; s < snake.length; s++) {
-        console.log(snake[s]);
-        drawTile(snake[s].x, snake[s].y, Tile.Snake);
-    }
-
-    // SEPARATE SNAKE FROM BOARD, make snake has its own path non dependable of board
-
 }
 
-const move = (x: number, y: number): number[] => {
-    switch(currentDirection) {
-        case Key.DOWN:
-            y++;
-            break;
-        case Key.UP:
-            y--;
-            break;
-        case Key.LEFT:
-            x--;
-            break;
-        case Key.RIGHT:
-            x++;
-            break;
-        default:
-            break;
-    }
-
-    if (x < boardSizeW && y < boardSizeH && y >= 0 && x >= 0) {
-        board[x][y] = Tile.Snake;
-    }
-
-    return [x, y];
-
+const gameOver = () => {
+    alert("Fail, game over");
+    initBoard();
+    // window.location.reload();
 }
 
 const frame = () => {
+    draw();
+    clearTimeout(timeout);
     timeout = setTimeout(() => {
-        requestAnimationFrame(draw);
-        clearTimeout(timeout);
+        requestAnimationFrame(frame);
     }, refresh)
 }
 
+const calculateNextPositions = () => {
+
+    let currentX = snake[0].x;
+    let currentY = snake[0].y;
+
+    if (currentX < 0 || currentX > boardSizeW || currentY < 0 || currentY > boardSizeH) return;
+
+    switch(currentDirection) {
+        case Key.DOWN: currentY++; break; 
+        case Key.UP: currentY--; break;
+        case Key.LEFT: currentX--; break;
+        case Key.RIGHT: currentX++; break;
+        default: break;
+    }
+
+    snake.pop();
+
+    if (currentY > boardSizeH - 1) { solidWalls ? gameOver() : currentY = 0 };
+    if (currentY < 0) { solidWalls ? gameOver() : currentY = boardSizeH - 1 };
+    if (currentX < 0) { solidWalls ? gameOver() : currentX = boardSizeW - 1 };
+    if (currentX > boardSizeW - 1) { solidWalls ? gameOver() : currentX = 0 };
+
+    snake.unshift({
+        x: currentX,
+        y: currentY
+    });
+
+}
+
 const clear = () => ctx.clearRect(0, 0, boardWidth, boardHeight)
+
 const attachListeners = () => document.onkeyup = bindKeys;   
+const unbindListeners = () => document.onkeyup = null;
 
 const bindKeys = (e) => {
     switch(e.keyCode) {
         case Key.DOWN:
+            if (currentDirection === Key.UP) return;
             currentDirection = Key.DOWN;
             break;
         case Key.UP:
+            if (currentDirection === Key.DOWN) return;        
             currentDirection = Key.UP;
             break;
         case Key.LEFT:
+            if (currentDirection === Key.RIGHT) return;                
             currentDirection = Key.LEFT;
             break;
         case Key.RIGHT:
+            if (currentDirection === Key.LEFT) return;                        
             currentDirection = Key.RIGHT;
             break;
         default:
@@ -134,22 +186,6 @@ const getTileColor = (type: Tile): string => {
     }
 }
 
-const moveLeft = () => {
-
-}
-
-const moveRight = () => {
-
-}
-
-const moveDown = () => {
-
-}
-
-const moveUp = () => {
-
-}
-
 const initBoard = () => {
 
     for (let y = 0; y < boardSizeH; y++) {
@@ -159,11 +195,24 @@ const initBoard = () => {
         }
     }
 
+    for (let i = 0; i < walls.length; i++) {
+        if (walls[i].checked) {
+            solidWalls = walls[i].value;
+            break;
+        }
+    }
+
     clearTimeout(timeout);
+    snake = [];
+    scoreEl.innerHTML = `0`;
+    refresh = 250;
+    currentDirection = Key.LEFT;
+    unbindListeners();
     initSnake();
     randomizeFood();
     attachListeners();
     requestAnimationFrame(frame);
+    
 
 }
 
@@ -184,13 +233,6 @@ const randomizeFood = () => {
 
 }
 
-const initSnake = () => {
-
-    snake.push({
-        x: 5,
-        y: 5
-    });
-
-}
+const initSnake = () => snake.push({ x: 8, y: 8 });
 
 initBoard();
