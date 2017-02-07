@@ -9,7 +9,7 @@ const blockSize = 50;
 const boardSizeW = boardWidth / blockSize;
 const boardSizeH = boardHeight / blockSize;
 
-let solidWalls = true;
+let solidWalls = false;
 let board: Tile[][] = [];
 let currentDirection: Key = 37;
 let refresh = 250;
@@ -133,6 +133,8 @@ const calculateNextPositions = () => {
 
     snake.pop();
 
+    console.log(!!solidWalls)
+
     if (currentY > boardSizeH - 1) { solidWalls ? gameOver() : currentY = 0 };
     if (currentY < 0) { solidWalls ? gameOver() : currentY = boardSizeH - 1 };
     if (currentX < 0) { solidWalls ? gameOver() : currentX = boardSizeW - 1 };
@@ -197,7 +199,7 @@ const initBoard = () => {
 
     for (let i = 0; i < walls.length; i++) {
         if (walls[i].checked) {
-            solidWalls = walls[i].value;
+            if (walls[i].value == 1) solidWalls = true;
             break;
         }
     }
