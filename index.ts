@@ -133,8 +133,6 @@ const calculateNextPositions = () => {
 
     snake.pop();
 
-    console.log(!!solidWalls)
-
     if (currentY > boardSizeH - 1) { solidWalls ? gameOver() : currentY = 0 };
     if (currentY < 0) { solidWalls ? gameOver() : currentY = boardSizeH - 1 };
     if (currentX < 0) { solidWalls ? gameOver() : currentX = boardSizeW - 1 };
